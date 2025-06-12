@@ -1,0 +1,6 @@
+# configurations
+.idea
+.vscode
+
+# git folder
+.git
