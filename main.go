@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/scrapeless-ai/sdk-go/scrapeless"
 	scrapeless_actor "github.com/scrapeless-ai/sdk-go/scrapeless/actor"
 	"github.com/scrapeless-ai/sdk-go/scrapeless/log"
-	"github.com/scrapeless-ai/sdk-go/scrapeless/services/proxies"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,51 +14,55 @@ type RequestParam struct {
 	Url string `json:"url"`
 }
 
+var (
+	// New scrapeless client
+	client *scrapeless.Client
+	// New scrapeless actor
+	actor *scrapeless_actor.Actor
+)
+
 func main() {
 	// New scrapeless actor
-	actor := scrapeless_actor.New()
+	actor = scrapeless_actor.New()
 	defer actor.Close()
+	// New scrapeless client
+	client = scrapeless.New(scrapeless.WithDeepSerp())
+	defer client.Close()
+
 	var param = &RequestParam{}
 	if err := actor.Input(param); err != nil {
-		log.Error(err.Error())
 		return
 	}
 	// Get proxy
-	proxy, err := actor.Proxy.Proxy(context.TODO(), proxies.ProxyActor{
-		Country:         "us",
-		SessionDuration: 10,
-	})
+	proxy, proxyErr := getProxy(context.Background())
+	if proxyErr != nil {
+		return
+	}
+	data, requestErr := doRequestWithProxy(param, proxy)
+	if requestErr != nil {
+		return
+	}
+	addErr := datasetAddItem(context.Background(), []map[string]interface{}{{"data": data}})
+	if addErr != nil {
+		return
+	}
+}
 
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	parse, err := url.Parse(proxy)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
+// Use proxy for http access
+func doRequestWithProxy(param *RequestParam, proxy *url.URL) ([]byte, error) {
 	// Set up proxy using Golang's native HTTP
-	client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(parse)}}
+	client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}
 	// get response
 	resp, err := client.Get(param.Url)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err.Error())
-		return
+		return nil, err
 	}
-	// use dataset
-	items, err := actor.AddItems(context.Background(), []map[string]interface{}{
-		{"body": string(body)},
-	})
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	log.Info(items)
+	return body, nil
 }

@@ -2,7 +2,10 @@ module actor-template-go
 
 go 1.24.0
 
-require github.com/scrapeless-ai/sdk-go v0.0.2
+require (
+	github.com/chai2010/webp v1.4.0
+	github.com/scrapeless-ai/sdk-go v1.0.0
+)
 
 require (
 	github.com/bytedance/sonic v1.13.2 // indirect
