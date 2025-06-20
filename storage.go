@@ -54,7 +54,7 @@ func objectPut(ctx context.Context) error {
 }
 
 func datasetAddItem(ctx context.Context, items []map[string]interface{}) error {
-	isAdd, addErr := actor.AddItems(context.Background(), items)
+	isAdd, addErr := actor.AddItems(ctx, items)
 	if addErr != nil {
 		log.Error(addErr.Error())
 		return addErr
@@ -73,7 +73,7 @@ func downloadWebpAsPngBytes(url string) ([]byte, error) {
 		Timeout: 15 * time.Second,
 	}
 
-	// 下载 .webp 图片
+	// download .webp image
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("http get error: %w", err)
@@ -84,13 +84,12 @@ func downloadWebpAsPngBytes(url string) ([]byte, error) {
 		return nil, fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	// 解码 WebP -> image.Image
+	// WebP -> image.Image
 	img, err := webp.Decode(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("webp decode error: %w", err)
 	}
 
-	// 编码为 PNG 并写入 buffer
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, fmt.Errorf("png encode error: %w", err)
